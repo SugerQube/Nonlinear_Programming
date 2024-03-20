@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="utf-8">
+    <title>SQLBlood</title>
+    <style>
+        /* 根据需求添加自定义样式 */
+        html {
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 98%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .top-section {
+            height: 900px;
+            width: 100%;
+            display: flex;
+            border: 2px solid #3eafa5;
+            box-sizing: border-box;
+        }
+
+        .top-section .half-width-left {
+            width: 50%;
+            height: 100%;
+            box-sizing: border-box;
+            float: left;
+            border: 2px solid #ff5e5e;
+        }
+
+        .left-button {
+            position: absolute;
+        }
+
+        .top-section .half-width-right {
+            width: 50%;
+            height: 100%;
+            box-sizing: border-box;
+            border: 2px solid #485fad;
+        }
+
+        .bottom-section {
+            height: 1080px;
+            width: 100%;
+            border: 2px solid #7c40a8;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            width: 95%;
+            height: 90%;
+            margin: 2%;
+            padding: 1%;
+            resize: none;
+        }
+
+        input[type="text"] {
+            width: 8%;
+            margin: 2% 0;
+            padding: 1%;
+        }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="highlight/styles/docco.css" />
+    <script src="highlight/highlight.js"></script>
+
+</head>
+
+<body>
+    <div class="container">
+        <!-- <h1>SQLBlood</h1> -->
+        <pre><code class="SQL">
+            # SQLBlood
+          </code></pre>
+        按钮ID<input type="text" id="idInput" placeholder="按钮ID">
+        树ID<input type="text" id="treeIdInput" placeholder="树ID">
+        层级<input type="text" id="levelInput" placeholder="层级">
+        编号<input type="text" id="numberInput" placeholder="编号">
+        按钮名称<input type="text" id="nameInput" placeholder="按钮名称">
+        内部代码<input type="text" id="innerCodeInput" placeholder="内部代码">
+        <button id="addButton">添加按钮</button>
+        <div class="top-section">
+            <div class="half-width-left" id="leftHalf"></div>
+            <div class="half-width-right">
+                <button id="updateButton">更新按钮</button> <!-- 更新按钮 -->
+                <button class="operation-button" data-operation="decrementTreeId">Tree-</button>
+                <button class="operation-button" data-operation="incrementTreeId">Tree+</button>
+                <button class="operation-button" data-operation="decrementLevel">Level-</button>
+                <button class="operation-button" data-operation="incrementLevel">Level+</button>
+                <button class="operation-button" data-operation="decrementNumber">Number-</button>
+                <button class="operation-button" data-operation="incrementNumber">Number+</button>
+                <button id="deleteButton">刪除按钮</button> <!-- 更新按钮 -->
+                <textarea id="resultTextarea" rows="10"></textarea>
+            </div>
+        </div>
+        <!-- 下半部分 -->
+        <div class="bottom-section">
+            <!-- 下半部分内容 -->
+            <button id="generateButton">生成结果（序列化）</button>
+            <button id="deserializeButton">反序列化</button> <!-- 反序列化按钮 -->
+            <button id="fillTreeButton">填充按钮</button> <!-- 填充属性按钮 -->
+            <textarea id="outputTextarea" rows="20">
+/* id: 1, treeId: 1, level: 0, number: 1, name: z_base_1 */
+# z_base_1
+/* 分割线 */
+/* id: 2, treeId: 1, level: 0, number: 2, name: z_src_1 */
+# z_src_1
+/* 分割线 */
+/* id: 11, treeId: 1, level: 1, number: 1, name: x01 */
+DROP TABLE IF EXISTS x01
+/* 分割线 */
+/* id: 12, treeId: 1, level: 1, number: 2, name: x02 */
+DROP TABLE IF EXISTS x02
+/* 分割线 */
+/* id: 21, treeId: 1, level: 2, number: 1, name: x03 */
+DROP TABLE IF EXISTS x03
+/* 分割线 */        
+            </textarea> <!-- 多行文本框 -->
+        </div>
+    </div>
+
+    <!-- JavaScript代码 -->
+    <script src="js/vendor/jquery-3.4.1.min.js"></script>
+    <!-- <script src="js/layui/layui.js"></script> -->
+    <!-- <script src="js/jquery-cookie/jquery.cookie.js"></script> -->
+    <!-- <script src="js/echarts.min.js"></script> -->
+
+    <script type="text/javascript">
+        var treeCode = []; // 存储按钮对象的数组
+        hljs.highlightAll();
+
+
+
+        // 添加按钮点击事件
+        $("#addButton").click(function () {
+            var level = $("#levelInput").val().trim();
+            var number = $("#numberInput").val().trim();
+            var treeId = $("#treeIdInput").val().trim();
+            var innerCode = $("#innerCodeInput").val().trim();
+            var name = $("#nameInput").val().trim(); // 获取按钮名称
+
+            if (level && number && treeId && innerCode && name) {
+                var id = parseInt(level) * 10 + parseInt(number); // 生成 id
+                var buttonCode = {
+                    id: id.toString(), // 将 id 转换为字符串
+                    treeId: treeId,
+                    level: level,
+                    number: number,
+                    innerCode: innerCode,
+                    name: name // 添加 name 属性
+                };
+                treeCode.push(buttonCode);
+                generateButtonsFromTreeCode();
+            } else {
+                alert("请填写完整按钮信息");
+            }
+        });
+
+
+        // 更新按钮点击事件
+        $("#updateButton").click(function () {
+            var updatedInnerCode = $("#resultTextarea").val().trim();
+            var nameToUpdate = $("#nameInput").val().trim(); // 获取按钮名称
+            var idToUpdate = $("#idInput").val().trim(); // 获取按钮 ID
+            var buttonIndexToUpdate = treeCode.findIndex(function (item) {
+                return item.id === idToUpdate;
+            });
+            var newid = parseInt($("#levelInput").val()) * 10 + parseInt($("#numberInput").val()) +
+                ""; // 生成按钮 ID
+            if (buttonIndexToUpdate !== -1) {
+                // 删除具有特定 id 的对象
+                treeCode.splice(buttonIndexToUpdate, 1);
+
+                // 创建一个新的按钮对象
+                var newButton = {
+                    id: newid,
+                    treeId: $("#treeIdInput").val().trim(),
+                    level: $("#levelInput").val().trim(),
+                    number: $("#numberInput").val().trim(),
+                    name: nameToUpdate,
+                    innerCode: updatedInnerCode
+                };
+
+                // 将新的按钮对象插入数组中
+                treeCode.push(newButton);
+
+                // 重新生成按钮
+                generateButtonsFromTreeCode();
+            } else {
+                alert("未找到匹配的按钮");
+            }
+        });
+
+
+        // 刪除按钮点击事件
+        $("#deleteButton").click(function () {
+            var updatedInnerCode = $("#resultTextarea").val().trim();
+            var nameToUpdate = $("#nameInput").val().trim(); // 获取按钮名称
+            var idToUpdate = $("#idInput").val().trim(); // 获取按钮 ID
+            var buttonIndexToUpdate = treeCode.findIndex(function (item) {
+                return item.id === idToUpdate;
+            });
+            var newid = parseInt($("#levelInput").val()) * 10 + parseInt($("#numberInput").val()) +
+                ""; // 获取按钮 ID
+            if (buttonIndexToUpdate !== -1) {
+                // 删除具有特定 id 的对象
+                treeCode.splice(buttonIndexToUpdate, 1);
+
+                // 重新生成按钮
+                generateButtonsFromTreeCode();
+            } else {
+                alert("未找到匹配的按钮");
+            }
+        });
+
+
+        // 操作按钮点击事件
+        $(".operation-button").click(function () {
+            var operationType = $(this).data("operation"); // 获取操作类型
+            var idToUpdate = $("#idInput").val().trim(); // 获取按钮 ID
+            var buttonToUpdate = treeCode.find(function (item) {
+                return item.id === idToUpdate;
+            });
+            if (buttonToUpdate) {
+                switch (operationType) {
+                    case "incrementTreeId":
+                        buttonToUpdate.treeId++;
+                        break;
+                    case "decrementTreeId":
+                        buttonToUpdate.treeId--;
+                        break;
+                    case "incrementLevel":
+                        buttonToUpdate.level++;
+                        break;
+                    case "decrementLevel":
+                        buttonToUpdate.level--;
+                        break;
+                    case "incrementNumber":
+                        buttonToUpdate.number++;
+                        break;
+                    case "decrementNumber":
+                        buttonToUpdate.number--;
+                        break;
+                    default:
+                        alert("未知操作类型");
+                }
+                fillButtonProperties(buttonToUpdate)
+                generateButtonsFromTreeCode();
+            } else {
+                alert("未找到匹配的按钮");
+            }
+        });
+
+
+        // 生成结果（序列化）點擊事件
+        $("#generateButton").click(function () {
+            // 将 treeCode 数组序列化为 resultCode 变量
+            var resultCode = serializeTreeCode(treeCode);
+            // 将 resultCode 的文本填充到下半部分的多行文本框中
+            $("#outputTextarea").val(resultCode);
+        });
+
+        // 序列化 treeCode 数组函数
+        function serializeTreeCode(treeCode) {
+            var serializedCode = "";
+            // 按照 id 进行升序排列
+            treeCode.sort(function (a, b) {
+                return parseInt(a.id) - parseInt(b.id);
+            });
+            // 遍历 treeCode 数组
+            treeCode.forEach(function (buttonCode) {
+                // 将按钮对象的属性序列化成单行，并用 "/* " 和 " */" 包裹
+                serializedCode += "/* id: " + buttonCode.id + ", treeId: " + buttonCode.treeId + ", level: " +
+                    buttonCode.level + ", number: " + buttonCode.number + ", name: " + buttonCode.name +
+                    " */\n";
+                serializedCode += buttonCode.innerCode + "\n";
+                serializedCode += "/* 分割线 */\n";
+            });
+            return serializedCode;
+        }
+
+
+        // 反序列化按钮点击事件
+        $("#deserializeButton").click(function () {
+            // 清空 treeCode 数组
+            treeCode = [];
+            // 获取 outputTextarea 的内容
+            var resultCode = $("#outputTextarea").val();
+            // 将内容按 "/* 分割线 */" 分割成数组
+            var serializedArray = resultCode.split("/* 分割线 */");
+            serializedArray.forEach(function (serializedItem) {
+                // 去除开头和结尾的三个字符，然后按逗号分割按钮信息
+                var splitIndex = serializedItem.indexOf("*/") + 2;
+                if (splitIndex !== -1) {
+                    var buttonInfo = serializedItem.slice(0, splitIndex);
+                    var innerCode = serializedItem.slice(splitIndex + 1);
+                    // 去除多余的换行符
+                    buttonInfo = buttonInfo.replace(/\n/g, "");
+                    // 分割按钮信息成属性数组
+                    var serializedButtonInfo = buttonInfo.trim().slice(3, -3).split(", ");
+                    if (serializedButtonInfo.length >= 5) {
+                        // 解析按钮信息并创建按钮对象
+                        var buttonCode = {
+                            id: serializedButtonInfo[0].split(": ")[1],
+                            treeId: serializedButtonInfo[1].split(": ")[1],
+                            level: serializedButtonInfo[2].split(": ")[1],
+                            number: serializedButtonInfo[3].split(": ")[1],
+                            name: serializedButtonInfo[4].split(": ")[1],
+                            innerCode: innerCode.trim() // 内部代码是剩余的所有信息
+                        };
+                        // 添加按钮对象到 treeCode 数组
+                        treeCode.push(buttonCode);
+                    }
+                }
+            });
+            console.log(treeCode)
+            generateButtonsFromTreeCode()
+        });
+
+
+        // 填充属性按钮点击事件
+        $("#fillTreeButton").click(function () {
+            generateButtonsFromTreeCode();
+        });
+
+
+        // 生成按钮函数
+        function generateButtonsFromTreeCode() {
+            // 清空左侧按钮
+            $("#leftHalf").empty();
+            // 数组维护1-10代表的颜色
+            var colors = ["#617f72", "#c6dfc8", "#ddc871", "#b89485", "#f1939c"];
+            // 遍历 treeCode 数组，生成左侧按钮
+            treeCode.forEach(function (buttonCode) {
+                var button = document.createElement("button");
+                button.textContent = buttonCode.name; // 使用 buttonCode.name 作为按钮的文本内容
+                button.className = "left-button";
+                button.onclick = function () {
+                    fillButtonProperties(buttonCode);
+                };
+                // 根据按钮的 level 给按钮添加 margin-top
+                button.style.marginTop = (parseInt(buttonCode.level) * 40) + "px";
+                // 根据按钮的 number 给按钮添加 margin-left
+                button.style.marginLeft = (parseInt(buttonCode.number) * 120) + "px";
+                // 根据按钮的 treeId 设置背景颜色
+                var colorIndex = (parseInt(buttonCode.treeId)) % colors.length;
+                button.style.backgroundColor = colors[colorIndex];
+                $("#leftHalf").append(button); // 添加按钮到左侧容器中
+            });
+        }
+
+        // 定义填充按钮属性的函数
+        function fillButtonProperties(buttonCode) {
+            $("#resultTextarea").val(buttonCode.innerCode); // 填充 innerCode 到右侧文本框
+            // 填充属性到输入框中
+            $("#idInput").val(buttonCode.id);
+            $("#nameInput").val(buttonCode.name);
+            $("#treeIdInput").val(buttonCode.treeId);
+            $("#levelInput").val(buttonCode.level);
+            $("#numberInput").val(buttonCode.number);
+        }
+    </script>
+
+</body>
+
+</html>
